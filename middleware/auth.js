@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 import { prisma } from "../prisma/client.js";
 
-// Protects routes — requires a valid logged-in user
+// Protects routes — requires a valid logged-in user (customer session)
 export function requireAuth(req, res, next) {
   const token = req.cookies?.drop_token;
 
@@ -18,9 +18,11 @@ export function requireAuth(req, res, next) {
   }
 }
 
-// Protects admin-only routes — requires login AND isAdmin = true
+// Protects admin-only routes — requires login AND isAdmin = true.
+// Uses its OWN cookie ("admin_token") so an admin session never collides
+// with a customer session in the same browser, even on the same domain.
 export async function requireAdmin(req, res, next) {
-  const token = req.cookies?.drop_token;
+  const token = req.cookies?.admin_token;
   if (!token) {
     return res.status(401).json({ error: "Not authenticated. Please sign in." });
   }
