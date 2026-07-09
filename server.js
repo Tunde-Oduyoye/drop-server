@@ -17,6 +17,15 @@ import { errorHandler, notFound } from "./middleware/errorHandler.js";
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Render (and most hosts) sit your app behind a reverse proxy, which adds
+// an X-Forwarded-For header to every request. Without this line, Express
+// doesn't know to trust that header, which makes express-rate-limit throw
+// ERR_ERL_UNEXPECTED_X_FORWARDED_FOR on every request through authLimiter
+// below — effectively breaking login/register/admin-login in production.
+// "1" means: trust exactly one hop (Render's own proxy) — not an open-ended
+// trust of arbitrary forwarded headers from anywhere.
+app.set("trust proxy", 1);
+
 // ── Security ──────────────────────────────────────────────
 app.use(helmet());
 // Allow both the customer storefront and the admin dashboard to talk to this API.
