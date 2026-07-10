@@ -3,14 +3,13 @@ import { prisma } from "../prisma/client.js";
 import { requireAuth, requireAdmin } from "../middleware/auth.js";
 
 const router = Router();
-router.use(requireAuth);
 
 function generateOrderNumber() {
   return `DRP${Date.now()}`;
 }
 
 // POST /api/orders — body: { items: [{productId,size,color,qty}], deliveryAddress, phone, paymentMethod, promoCode }
-router.post("/", async (req, res, next) => {
+router.post("/", requireAuth, async (req, res, next) => {
   try {
     const { items, deliveryAddress, phone, paymentMethod, promoCode } = req.body;
 
@@ -78,7 +77,7 @@ router.post("/", async (req, res, next) => {
 });
 
 // GET /api/orders — order history for logged-in user
-router.get("/", async (req, res, next) => {
+router.get("/", requireAuth, async (req, res, next) => {
   try {
     const orders = await prisma.order.findMany({
       where: { userId: req.userId },
@@ -93,6 +92,8 @@ router.get("/", async (req, res, next) => {
 
 // ── Admin-only routes — MUST be registered before GET /:id, ──
 // otherwise Express matches "admin" as the :id param and these never run.
+// These use requireAdmin ONLY (not requireAuth) since admin sessions carry
+// their own separate "admin_token" cookie, not the customer "drop_token".
 
 // GET /api/orders/admin/all — every order across all customers
 router.get("/admin/all", requireAdmin, async (req, res, next) => {
@@ -160,7 +161,7 @@ router.get("/admin/stats", requireAdmin, async (req, res, next) => {
 });
 
 // GET /api/orders/:id — single order detail (kept LAST so it doesn't swallow /admin/* routes above)
-router.get("/:id", async (req, res, next) => {
+router.get("/:id", requireAuth, async (req, res, next) => {
   try {
     const order = await prisma.order.findFirst({
       where: { id: req.params.id, userId: req.userId },
